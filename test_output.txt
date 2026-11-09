@@ -1,0 +1,253 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.5, pytest-9.2.0, pluggy-1.7.0 -- C:\Program Files\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced
+plugins: anyio-4.16.0
+collecting ... collected 19 items
+
+tests/audits/test_engine_isolated.py::test_repository_creation PASSED    [  5%]
+tests/audits/test_engine_isolated.py::test_repository_insert_and_get FAILED [ 10%]
+tests/audits/test_engine_isolated.py::test_rebuild_fts_index FAILED      [ 15%]
+tests/audits/test_engine_isolated.py::test_extract_pdf_digital FAILED    [ 21%]
+tests/audits/test_engine_isolated.py::test_extract_pdf_digital_ok_only FAILED [ 26%]
+tests/audits/test_engine_isolated.py::test_ocr_not_available_no_crash PASSED [ 31%]
+tests/audits/test_engine_isolated.py::test_exceptions_are_raisable PASSED [ 36%]
+tests/audits/test_engine_isolated.py::test_invalid_question_error PASSED [ 42%]
+tests/audits/test_engine_isolated.py::test_provider_confirmation_error PASSED [ 47%]
+tests/audits/test_engine_isolated.py::test_scan_collection_with_virtual_source PASSED [ 52%]
+tests/audits/test_engine_isolated.py::test_search_fts_basic PASSED       [ 57%]
+tests/audits/test_engine_isolated.py::test_validate_engine_empty PASSED  [ 63%]
+tests/audits/test_engine_isolated.py::test_validate_collection_path_none PASSED [ 68%]
+tests/audits/test_engine_isolated.py::test_validate_collection_path_valid PASSED [ 73%]
+tests/audits/test_engine_isolated.py::test_detect_collection_source_default_none PASSED [ 78%]
+tests/audits/test_engine_isolated.py::test_detect_workspace_root_default_none PASSED [ 84%]
+tests/audits/test_engine_isolated.py::test_rollback_preserves_previous PASSED [ 89%]
+tests/audits/test_engine_isolated.py::test_models_dataclasses PASSED     [ 94%]
+tests/audits/test_engine_isolated.py::test_digital_text_threshold PASSED [100%]
+
+================================== FAILURES ===================================
+_______________________ test_repository_insert_and_get ________________________
+
+temp_repo = <documental.database.Repository object at 0x0000025EAEDACE30>
+temp_pdf = (WindowsPath('C:/Users/Tx@mxm/AppData/Local/Temp/tmplcrn3x4i/sample.pdf'), 3)
+
+    @pytest.mark.isolated
+    def test_repository_insert_and_get(temp_repo, temp_pdf):
+        """Test: Insertar y recuperar documento y pßginas."""
+        from documental.fingerprint import compute_file_metadata
+    
+>       meta = compute_file_metadata(temp_pdf)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\audits\test_engine_isolated.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+vendor\document_engine\src\documental\fingerprint.py:28: in compute_file_metadata
+    p = Path(filepath)
+        ^^^^^^^^^^^^^^
+C:\Program Files\Python312\Lib\pathlib.py:1162: in __init__
+    super().__init__(*args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'WindowsPath' object has no attribute '_raw_paths'") raised in repr()] WindowsPath object at 0x25eaedb9d20>
+args = ((WindowsPath('C:/Users/Tx@mxm/AppData/Local/Temp/tmplcrn3x4i/sample.pdf'), 3),)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg._flavour is ntpath and self._flavour is posixpath:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.extend(path.replace('\\', '/') for path in arg._raw_paths)
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'tuple'
+
+C:\Program Files\Python312\Lib\pathlib.py:373: TypeError
+___________________________ test_rebuild_fts_index ____________________________
+
+temp_repo = <documental.database.Repository object at 0x0000025EAF3A3170>
+temp_pdf = (WindowsPath('C:/Users/Tx@mxm/AppData/Local/Temp/tmpkgci111c/sample.pdf'), 3)
+
+    @pytest.mark.isolated
+    def test_rebuild_fts_index(temp_repo, temp_pdf):
+        """Test: Reconstruir φndice FTS5 desde datos existentes."""
+        from documental.fingerprint import compute_file_metadata
+    
+>       meta = compute_file_metadata(temp_pdf)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\audits\test_engine_isolated.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+vendor\document_engine\src\documental\fingerprint.py:28: in compute_file_metadata
+    p = Path(filepath)
+        ^^^^^^^^^^^^^^
+C:\Program Files\Python312\Lib\pathlib.py:1162: in __init__
+    super().__init__(*args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'WindowsPath' object has no attribute '_raw_paths'") raised in repr()] WindowsPath object at 0x25eaedb9ee0>
+args = ((WindowsPath('C:/Users/Tx@mxm/AppData/Local/Temp/tmpkgci111c/sample.pdf'), 3),)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg._flavour is ntpath and self._flavour is posixpath:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.extend(path.replace('\\', '/') for path in arg._raw_paths)
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'tuple'
+
+C:\Program Files\Python312\Lib\pathlib.py:373: TypeError
+__________________________ test_extract_pdf_digital ___________________________
+
+temp_repo = <documental.database.Repository object at 0x0000025EAF3A38C0>
+temp_pdf = (WindowsPath('C:/Users/Tx@mxm/AppData/Local/Temp/tmpan5wzd73/sample.pdf'), 3)
+
+    @pytest.mark.isolated
+    def test_extract_pdf_digital(temp_repo, temp_pdf):
+        """Test: Extracci≤n digital de PDF - calidad de pßginas."""
+        from documental.extractor import extract_pdf_digital
+    
+        results = extract_pdf_digital(temp_pdf)
+    
+>       assert len(results) == 3  # 3 pßginas
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+E       assert 1 == 3
+E        +  where 1 = len([{'document_id': "(WindowsPath('C:/Users/Tx@mxm/AppData/Local/Temp/tmpan5wzd73/sample.pdf'), 3)", 'page_number': 0, 'text': '', 'extraction_method': 'failed', ...}])
+
+tests\audits\test_engine_isolated.py:226: AssertionError
+------------------------------ Captured log call ------------------------------
+ERROR    documental.extractor:extractor.py:30 Error (WindowsPath('C:/Users/Tx@mxm/AppData/Local/Temp/tmpan5wzd73/sample.pdf'), 3): [Errno 22] Invalid argument: "(WindowsPath('C:/Users/Tx@mxm/AppData/Local/Temp/tmpan5wzd73/sample.pdf'), 3)"
+______________________ test_extract_pdf_digital_ok_only _______________________
+
+temp_repo = <documental.database.Repository object at 0x0000025EAF3A06E0>
+temp_pdf_multi = WindowsPath('C:/Users/Tx@mxm/AppData/Local/Temp/tmpicpgx8j5/sample.pdf')
+
+    @pytest.mark.isolated
+    def test_extract_pdf_digital_ok_only(temp_repo, temp_pdf_multi):
+        """Test: Extracci≤n digital donde todas las pßginas tienen texto suficiente."""
+        from documental.extractor import extract_pdf
+    
+        results = extract_pdf(temp_pdf_multi, use_ocr=False)
+    
+        # Todas deberφan tener quality_status "ok" (por encima del umbral)
+        # Ajustamos temp_pdf_multi para que todas las pßginas tengan > 10 caracteres
+        for r in results:
+>           assert r["quality_status"] == "ok", f"Pßgina {r['page_number']} no ok: {r['quality_status']} - texto: '{r['text']}'"
+E           AssertionError: Pßgina 2 no ok: suspicious - texto: ''
+E           assert 'suspicious' == 'ok'
+E             
+E             - ok
+E             + suspicious
+
+tests\audits\test_engine_isolated.py:250: AssertionError
+============================== warnings summary ===============================
+tests\audits\test_engine_isolated.py:138
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:138: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:148
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:148: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:178
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:178: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:219
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:219: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:240
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:240: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:254
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:254: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:272
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:272: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:290
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:290: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:300
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:300: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:314
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:314: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:331
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:331: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:366
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:366: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:389
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:389: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:397
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:397: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:407
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:407: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:416
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:416: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:430
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:430: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:468
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:468: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests\audits\test_engine_isolated.py:532
+  C:\workspace\Tech-Cyan-Desktop-Advanced-documentacion-base\Tech-Cyan-Desktop-Advanced\tests\audits\test_engine_isolated.py:532: PytestUnknownMarkWarning: Unknown pytest.mark.isolated - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.isolated
+
+tests/audits/test_engine_isolated.py::test_repository_insert_and_get
+  C:\Users\Tx@mxm\AppData\Roaming\Python\Python312\site-packages\fitz\__init__.py:17: FutureWarning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/audits/test_engine_isolated.py::test_repository_insert_and_get
+FAILED tests/audits/test_engine_isolated.py::test_rebuild_fts_index - TypeErr...
+FAILED tests/audits/test_engine_isolated.py::test_extract_pdf_digital - asser...
+FAILED tests/audits/test_engine_isolated.py::test_extract_pdf_digital_ok_only
+================== 4 failed, 15 passed, 20 warnings in 3.97s ==================
