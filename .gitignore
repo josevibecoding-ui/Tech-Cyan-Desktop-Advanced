@@ -17,3 +17,4 @@ dist/
 *.log
 logs/
 runtime/
+test_results*.txt
