@@ -19,3 +19,8 @@ documental = "documental.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+markers = [
+    "isolated: pruebas aisladas del motor (solo tmp_path y PDFs sintéticos)",
+]

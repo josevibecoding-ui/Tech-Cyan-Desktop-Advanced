@@ -66,7 +66,7 @@ def _create_synthetic_pdf(temp_dir, pages_info):
       - text: str, contenido de la página
       - quality: str, "ok", "empty" o "suspicious" (opcional)
     """
-    import fitz as pymupdf
+    import pymupdf
     
     pdf_path = temp_dir / "sample.pdf"
     doc = pymupdf.open()
@@ -90,7 +90,7 @@ def _create_synthetic_pdf(temp_dir, pages_info):
 @pytest.fixture
 def temp_pdf(temp_dir):
     """Crear PDF sintético con 3 páginas: ok, empty, suspicious."""
-    import fitz as pymupdf
+    import pymupdf
     
     pdf_path = temp_dir / "sample.pdf"
     doc = pymupdf.open()
