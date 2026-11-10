@@ -546,3 +546,59 @@ if __name__ == "__main__":
     print("Ejecutando pruebas aisladas...")
     print("Tests disponibles: 22")
     print("Para ejecutar: python -m pytest tests/audits/test_engine_isolated.py -v")
+
+# =============================================================================
+# TESTS DE FALLBACK DE EXTRACCIÓN (pypdf ↔ pymupdf)
+# =============================================================================
+
+
+@pytest.mark.isolated
+def test_fallback_when_pypdf_fails(temp_pdf, caplog):
+    """Si pypdf lanza excepción, la extracción cae a pymupdf."""
+    import documental.extractor as ex
+
+    def boom(_):
+        raise RuntimeError("pypdf roto")
+    with patch.object(ex, "_extract_with_pypdf", boom):
+        results = ex.extract_pdf_digital(temp_pdf)
+    assert len(results) == 3
+    assert all(r["extraction_method"] != "failed" for r in results)
+    assert results[0]["quality_status"] == "ok"
+
+
+@pytest.mark.isolated
+def test_fallback_when_pypdf_returns_all_empty(temp_pdf):
+    """Si pypdf devuelve texto vacío en todas las páginas, se usa pymupdf."""
+    import documental.extractor as ex
+
+    with patch.object(ex, "_extract_with_pypdf", lambda _: ["", "", ""]):
+        results = ex.extract_pdf_digital(temp_pdf)
+    assert len(results) == 3
+    assert results[0]["quality_status"] == "ok"
+
+
+@pytest.mark.isolated
+def test_failed_when_all_backends_crash(temp_pdf):
+    """Si ambos backends fallan, retorna registro 'failed' sin lanzar excepción."""
+    import documental.extractor as ex
+
+    def boom(_):
+        raise RuntimeError("sin backends")
+    with patch.object(ex, "_extract_with_pypdf", boom),          patch.object(ex, "_extract_with_pymupdf", boom):
+        results = ex.extract_pdf_digital(temp_pdf)
+    assert len(results) == 1
+    assert results[0]["extraction_method"] == "failed"
+    assert results[0]["error_message"]
+
+
+@pytest.mark.isolated
+def test_pymupdf_missing_degrades_gracefully(temp_pdf):
+    """Si pymupdf no está instalado (ImportError), pypdf primario basta."""
+    import documental.extractor as ex
+
+    def no_module(_):
+        raise ImportError("pymupdf no instalado")
+    with patch.object(ex, "_extract_with_pymupdf", no_module):
+        results = ex.extract_pdf_digital(temp_pdf)
+    assert len(results) == 3
+    assert results[0]["quality_status"] == "ok"
