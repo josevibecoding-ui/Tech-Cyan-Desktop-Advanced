@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import sys
+import re
+
+try:
+    with open('vendor/document_engine/src/documental/cli.py', 'r', encoding='utf-8', errors='replace') as f:
+        content = f.read()
+
+    lines = content.split('\n')
+    print '=== CONTANDO instancias de print() ===' 
+    print_count = 0
+    for i, line in enumerate(lines, 1):
+        if 'print(' in line:
+            print_count += 1
+            if 'report' in line.lower() or 'error' in line.lower() or 'exito' in line.lower() or 'total' in line.lower() or 'procesando' in line.lower():
+                print('L{i}: {0}'.format(line.strip()[:100]))
+
+    print '\nTotal de lineas con print(): {0}'.format(print_count)
+
+    print '\n=== CONTANDO sys.exit ==='
+    matches = list(re.finditer(r'sys\.exit', content))
+    print 'Total de instancias sys.exit: {0}'.format(len(matches))
+    for m in matches:
+        start = max(0, m.start() - 60)
+        end = min(len(content), m.end() + 60)
+        print('Pos {0}: ...{1}...'.format(m.start(), content[start:end]))
+except Exception as e:
+    print 'Error: {0}'.format(e)
+    sys.exit(1)

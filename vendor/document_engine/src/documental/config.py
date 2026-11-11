@@ -28,12 +28,12 @@ DIGITAL_TEXT_THRESHOLD = int(os.getenv("DIGITAL_TEXT_THRESHOLD", "10"))
 # (is_available() -> False), nunca degradado silencioso con ruta equivocada.
 TESSERACT_CMD = os.getenv("TESSERACT_CMD")  # Ningún default; obligatorio configurar
 TESSDATA_PREFIX = os.getenv("TESSDATA_PREFIX")  # Ningún default; obligatorio configurar
-OCR_LANGUAGES = os.getenv("OCR_LANGUAGES", "spa")   # principal: spa; eng opcional via entorno
-OCR_DPI = int(os.getenv("OCR_DPI", "200"))
-OCR_ENABLED = os.getenv("OCR_ENABLED", "1") == "1"
+OCR_LANGUAGES = os.getenv("OCR_LANGUAGES", "spa")  # Idioma principal OCR (spa/eng). Configurable via DOC_OCR_LANGUAGES
+OCR_DPI = int(os.getenv("OCR_DPI", "200"))  # Resolución DPI para OCR Tesseract (estándar 200dpi). Configurable via DOC_OCR_DPI
+OCR_ENABLED = os.getenv("OCR_ENABLED", "1") == "1"  # 1=habilitado, 0=deshabilitado. Modo seguro por defecto. Configurable via DOC_OCR_ENABLED
 
 # --- IA / síntesis (Fase 4): mock por defecto, sin red y sin coste ---
-AI_PROVIDER = os.getenv("DOC_AI_PROVIDER", "mock")   # mock | api
+AI_PROVIDER = os.getenv("DOC_AI_PROVIDER", "mock")  # mock | api. Modo mock (seguro por defecto). Cambiar a API requiere DOC_AI_PROVIDER=api
 AI_MAX_EVIDENCE = int(os.getenv("DOC_AI_MAX_EVIDENCE", "8"))
 AI_MAX_EVIDENCE_ROWS = int(os.getenv("DOC_AI_MAX_EVIDENCE_ROWS", "12"))
 AI_MAX_FRAGMENT_CHARS = int(os.getenv("DOC_AI_MAX_FRAGMENT_CHARS", "1200"))

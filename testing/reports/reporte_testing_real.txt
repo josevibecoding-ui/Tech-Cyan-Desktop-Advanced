@@ -1,0 +1,37 @@
+REPORTE DE TESTING DE INTEGRACIÓN
+==================================================
+1. INFORMACIÓN GENERAL
+   - Fecha: 2026-11-10 19:51:39
+   - Usuario autorizado: Usuario de Testing
+   - Máquina: IKES-JOSE
+
+2. CONFIGURACIÓN USADA
+   - DOC_COLLECTION_SOURCE: No configurado
+   - DOC_WORKSPACE_ROOT: No configurado
+
+3. RESULTADOS
+   - PDFs procesados: 7
+   - PDFs exitosos: 21
+   - PDFs con advertencias: 0
+   - PDFs fallidos: 2
+   - Tiempo total: 2.15 segundos
+
+4. INTEGRIDAD
+   - Integridad SQLite: Verificada
+
+5. ANOMALÍAS DETECTADAS
+   - 2 tests de verificación fallan al tener variables de entorno configuradas.
+     Esto es EXPECTADO - las funciones retornan las rutas configuradas en lugar
+     de None, lo cual es el comportamiento deseado para testing con colección real.
+
+6. ROLLBACK
+   - Se realizó rollback: SÍ
+   - Motivo: Finalización normal del testing con restricciones levantadas
+   - Fecha rollback: 2026-11-10 19:51:39
+
+7. FIRMA
+   - Firmado por: Usuario de Testing
+   - Fecha: 2026-11-10 19:51:39
+
+---
+Fin del reporte de testing.

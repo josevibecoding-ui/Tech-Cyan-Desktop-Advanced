@@ -178,7 +178,7 @@ def cmd_update(args):
             try:
                 meta = compute_file_metadata(fp)
             except Exception as e:
-                print(f"Error de fingerprint {fi['filename']}: {e}")
+                raise ExtractionError(f"Error de fingerprint {fi['filename']}: {e}")
                 report["errores"] += 1
                 continue
             doc = repo.get_document(fi["document_id"])
@@ -323,7 +323,7 @@ def cmd_update(args):
                 etiqueta = "modificado" if accion == "modificado" else "nuevo"
                 print(f"  [{i}/{len(todo)}] {fn}: {len(pr)} pág, {ok} ok{extra} [{etiqueta}]")
             except Exception as e:
-                print(f"Error {fn}: {e}")
+                raise ExtractionError(f"Error {fn}: {e}")
                 report["errores"] += 1
                 if not repo.document_exists(did):
                     repo.update_document_status(did, "error")

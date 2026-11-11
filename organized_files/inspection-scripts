@@ -1,0 +1,13 @@
+with open('vendor/document_engine/src/documental/cli.py', 'r', encoding='utf-8', errors='replace') as f:
+    content = f.read()
+
+lines = content.split('\n')
+# Mostrar _store_document
+for i, line in enumerate(lines):
+    if 'def _store_document' in line:
+        start = i
+        break
+print(f'_store_document empieza en L{start+1}')
+for i in range(start, min(start+80, len(lines))):
+    marker = '>>>' if i == start else '   '
+    print(f'{marker} L{i+1}: {lines[i]}')
