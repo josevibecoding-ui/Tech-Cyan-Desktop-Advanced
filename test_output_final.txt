@@ -1,0 +1,40 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.5, pytest-9.2.0, pluggy-1.7.0 -- C:\Program Files\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: C:\workspace\Tech-Cyan-Desktop-Advanced
+configfile: pyproject.toml
+plugins: anyio-4.16.0
+collecting ... collected 30 items
+
+tests/audits/test_engine_isolated.py::test_repository_creation PASSED    [  3%]
+tests/audits/test_engine_isolated.py::test_repository_insert_and_get PASSED [  6%]
+tests/audits/test_engine_isolated.py::test_rebuild_fts_index PASSED      [ 10%]
+tests/audits/test_engine_isolated.py::test_extract_pdf_digital PASSED    [ 13%]
+tests/audits/test_engine_isolated.py::test_extract_pdf_digital_ok_only PASSED [ 16%]
+tests/audits/test_engine_isolated.py::test_ocr_not_available_no_crash PASSED [ 20%]
+tests/audits/test_engine_isolated.py::test_exceptions_are_raisable PASSED [ 23%]
+tests/audits/test_engine_isolated.py::test_invalid_question_error PASSED [ 26%]
+tests/audits/test_engine_isolated.py::test_provider_confirmation_error PASSED [ 30%]
+tests/audits/test_engine_isolated.py::test_scan_collection_with_virtual_source PASSED [ 33%]
+tests/audits/test_engine_isolated.py::test_search_fts_basic PASSED       [ 36%]
+tests/audits/test_engine_isolated.py::test_validate_engine_empty PASSED  [ 40%]
+tests/audits/test_engine_isolated.py::test_validate_collection_path_none PASSED [ 43%]
+tests/audits/test_engine_isolated.py::test_validate_collection_path_valid PASSED [ 46%]
+tests/audits/test_engine_isolated.py::test_detect_collection_source_default_none PASSED [ 50%]
+tests/audits/test_engine_isolated.py::test_detect_workspace_root_default_none PASSED [ 53%]
+tests/audits/test_engine_isolated.py::test_rollback_preserves_previous PASSED [ 56%]
+tests/audits/test_engine_isolated.py::test_models_dataclasses PASSED     [ 60%]
+tests/audits/test_engine_isolated.py::test_digital_text_threshold PASSED [ 63%]
+tests/audits/test_engine_isolated.py::test_tcda_workspace_root_isolated_from_doc_env PASSED [ 66%]
+tests/audits/test_engine_isolated.py::test_tcda_collection_source_isolated_from_doc_env PASSED [ 70%]
+tests/audits/test_engine_isolated.py::test_tcdai_provider_default_mock PASSED [ 73%]
+tests/audits/test_engine_isolated.py::test_tcdai_config_explicit_can_coexist PASSED [ 76%]
+tests/audits/test_engine_isolated.py::test_tcdai_no_tcda_vars_uses_defaults PASSED [ 80%]
+tests/audits/test_engine_isolated.py::test_ocr_environment_restore_after_exception PASSED [ 83%]
+tests/audits/test_engine_isolated.py::test_tcdai_ai_provider_mock_not_activate_api PASSED [ 86%]
+tests/audits/test_engine_isolated.py::test_digital_text_threshold_from_config PASSED [ 90%]
+tests/audits/test_engine_isolated.py::test_update_collection_document_modified_staging PASSED [ 93%]
+tests/audits/test_engine_isolated.py::test_update_collection_rollback_conceptual PASSED [ 96%]
+tests/audits/test_engine_isolated.py::test_update_collection_orphan_pages_conceptual PASSED [100%]
+
+============================= 30 passed in 1.89s ==============================
