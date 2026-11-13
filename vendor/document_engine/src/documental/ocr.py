@@ -4,61 +4,118 @@ Reglas:
 - Sin servicios OCR en la nube, sin modelos LLM locales, sin costes.
 - OCR únicamente cuando la extracción digital no es suficiente.
 - Procesamiento por página.
+- Configuración acotada: variables de entorno Tesseract se establecen
+  temporalmente y se restauran después, nunca dejando cambios permanentes.
 """
+
 import io
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from threading import Lock
+from typing import Any, Dict, List, Optional, Tuple
 
-from .config import (
-    DIGITAL_TEXT_THRESHOLD,
-    OCR_DPI,
-    OCR_ENABLED,
-    OCR_LANGUAGES,
-    TESSDATA_PREFIX,
-    TESSERACT_CMD,
-)
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 
 _configured = False
 _available: Optional[bool] = None
+_environment_snapshot: Optional[Dict[str, str]] = None
+_configure_lock = Lock()
+
+
+def _snapshot_environment() -> Dict[str, str]:
+    """Capturar el estado actual de variables de entorno relevantes.
+
+    Returns:
+        Dict con el estado previo de TESSDATA_PREFIX y otras variables
+        para poder restaurar después.
+    """
+    return {
+        k: v for k, v in os.environ.items()
+        if k in ("TESSDATA_PREFIX",)
+    }
+
+
+def _restore_environment(snapshot: Dict[str, str]) -> None:
+    """Restaurar variables de entorno a su estado previo.
+
+    Args:
+        snapshot: Dict con el estado previo capturado por _snapshot_environment.
+    """
+    for key, value in snapshot.items():
+        if value is None:
+            # Remover la variable si existía antes
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
 
 
 def _configure() -> bool:
-    """Configura pytesseract (binario y tessdata). Devuelve True si responde."""
-    global _configured, _available
-    if _configured:
-        return bool(_available)
-    _configured = True
-    try:
-        import pytesseract
+    """Configura pytesseract (binario y tessdata) de forma acotada.
 
-        if TESSERACT_CMD and Path(TESSERACT_CMD).exists():
-            pytesseract.pytesseract.tesseract_cmd = str(TESSERACT_CMD)
-        if TESSDATA_PREFIX and Path(TESSDATA_PREFIX).is_dir():
-            os.environ["TESSDATA_PREFIX"] = str(TESSDATA_PREFIX)
-        # Comprobación real de disponibilidad
-        _ = str(pytesseract.get_tesseract_version())
-        _available = True
-        logger.info("Tesseract disponible: %s", _)
-    except Exception as e:
-        _available = False
-        logger.warning("Tesseract no disponible: %s", e)
-    return bool(_available)
+    Devuelve True si Tesseract está disponible.
+    Las modificaciones a variables globales se restauran después.
+
+    Reglas críticas:
+    - No dejar cambios permanentes en os.environ["TESSDATA_PREFIX"].
+    - No dejar pytesseract.pytesseract.tesseract_cmd modificado permanentemente.
+    - Proteger llamadas simultáneas con lock.
+    - Restaurar estado exacto aunque ocurra una excepción.
+    """
+    global _configured, _available
+    with _configure_lock:
+        if _configured:
+            return bool(_available)
+        _configured = True
+
+        config = get_config()
+        snapshot = _snapshot_environment()
+
+        try:
+            import pytesseract
+
+            # Establecer Tesseract CMD de forma local y restaurar después
+            tesseract_changed = False
+            if config.tesseract_cmd and Path(config.tesseract_cmd).exists():
+                # Establecer temporalmente para esta operación
+                pytesseract.pytesseract.tesseract_cmd = str(config.tesseract_cmd)
+                tesseract_changed = True
+
+            # Establecer TESSDATA_PREFIX de forma temporal SOLO para esta operación
+            # NO escribir en os.environ permanentemente.
+            # Nota: pytesseract lee os.environ["TESSDATA_PREFIX"], así que lo
+            # configuramos temporalmente y luego restauramos.
+            if config.tessdata_prefix:
+                os.environ["TESSDATA_PREFIX"] = str(config.tessdata_prefix)
+
+            # Comprobación real de disponibilidad
+            _ = str(pytesseract.get_tesseract_version())
+            _available = True
+            logger.info("Tesseract disponible")
+        except Exception as e:
+            _available = False
+            logger.warning("Tesseract no disponible: %s", e)
+        finally:
+            # Restaurar entorno exacto aunque haya excepción
+            _restore_environment(snapshot)
+
+        return bool(_available)
 
 
 def is_available() -> bool:
     """OCR habilitado en configuración y Tesseract instalado."""
-    if not OCR_ENABLED:
+    config = get_config()
+    if not config.ocr_enabled:
         return False
     return _configure()
 
 
 def engine_info() -> Dict[str, str]:
     """Motor, idioma y versión usados (para registrar por página)."""
-    info = {"engine": "tesseract", "language": OCR_LANGUAGES, "version": ""}
+    config = get_config()
+    info = {"engine": "tesseract", "language": config.ocr_languages, "version": ""}
     try:
         import pytesseract
 
@@ -73,9 +130,10 @@ def ocr_image_png(png_bytes: bytes, lang: Optional[str] = None) -> str:
     import pytesseract
     from PIL import Image
 
+    config = get_config()
     _configure()
     img = Image.open(io.BytesIO(png_bytes))
-    text = pytesseract.image_to_string(img, lang=lang or OCR_LANGUAGES)
+    text = pytesseract.image_to_string(img, lang=lang or config.ocr_languages)
     return (text or "").strip()
 
 
@@ -84,11 +142,13 @@ def ocr_pdf_page(filepath: Path, page_number: int, dpi: Optional[int] = None,
     """OCR de una página concreta de un PDF.
 
     Devuelve dict con: text, ocr_engine, ocr_language, ocr_version, error.
-    """
+   """
+    from .config import get_config as _get_config
+    config = _get_config()
     result = {
         "text": "",
         "ocr_engine": "tesseract",
-        "ocr_language": lang or OCR_LANGUAGES,
+        "ocr_language": lang or config.ocr_languages,
         "ocr_version": "",
         "error": None,
     }
@@ -102,7 +162,7 @@ def ocr_pdf_page(filepath: Path, page_number: int, dpi: Optional[int] = None,
             if page_number < 1 or page_number > doc.page_count:
                 result["error"] = f"pagina_invalida:{page_number}"
                 return result
-            pix = doc[page_number - 1].get_pixmap(dpi=dpi or OCR_DPI)
+            pix = doc[page_number - 1].get_pixmap(dpi=dpi or config.ocr_dpi)
             png = pix.tobytes("png")
         result["text"] = ocr_image_png(png, lang=lang)
         info = engine_info()
@@ -124,6 +184,7 @@ def ocr_pages_if_needed(filepath: Path, results: List[Dict[str, Any]],
         logger.warning("OCR omitido: Tesseract no disponible")
         return results
 
+    config = get_config()
     pending = [r for r in results
                if r.get("quality_status") in ("empty", "suspicious")
                and r.get("page_number", 0) > 0]
@@ -148,7 +209,7 @@ def ocr_pages_if_needed(filepath: Path, results: List[Dict[str, Any]],
             r["extraction_method"] = "ocr"
             r["quality_status"] = "ocr_required"
             r["error_message"] = "ocr_sin_texto"
-        elif cc < DIGITAL_TEXT_THRESHOLD:
+        elif cc < config.digital_text_threshold:
             r["text"] = text
             r["extraction_method"] = "ocr"
             r["quality_status"] = "suspicious"

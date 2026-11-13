@@ -1,7 +1,7 @@
 """Proveedores de síntesis desacoplados (AGENTS.md §10, ARQUITECTURA §7).
 
 - `mock`: predeterminado, sin red y sin coste. No realiza llamadas.
-- `api`: proveedor real, requiere configuración en variables de entorno.
+- `api`: proveedor real, requiere configuración en variables de entorno TCDA_AI_*.
 
 La capa de proveedor recibe pregunta, instrucciones de salida y evidencia
 seleccionada (fragmentos con ID). No tiene acceso a archivos ni a SQLite.
@@ -65,10 +65,10 @@ class MockProvider(Provider):
 class APIProvider(Provider):
     """Proveedor real HTTP (compatible con la API de chat más extendida).
 
-    Requiere configuración en variables de entorno:
-    - DOC_AI_API_KEY  (obligatoria; la clave nunca se almacena)
-    - DOC_AI_BASE_URL (opcional; por defecto https://api.openai.com/v1)
-    - DOC_AI_MODEL    (opcional; por defecto gpt-4o-mini)
+    Requiere configuración en variables de entorno TCDA_AI_*:
+    - TCDA_AI_API_KEY (obligatoria; la clave nunca se almacena)
+    - TCDA_AI_BASE_URL (opcional; por defecto https://api.openai.com/v1)
+    - TCDA_AI_MODEL    (opcional; por defecto gpt-4o-mini)
     """
 
     name = "api"
@@ -77,17 +77,17 @@ class APIProvider(Provider):
                  base_url: Optional[str] = None,
                  model: Optional[str] = None,
                  timeout: int = 60):
-        self.api_key = api_key or os.getenv("DOC_AI_API_KEY", "")
-        self.base_url = (base_url or os.getenv("DOC_AI_BASE_URL")
+        self.api_key = api_key or os.getenv("TCDA_AI_API_KEY", "")
+        self.base_url = (base_url or os.getenv("TCDA_AI_BASE_URL")
                          or "https://api.openai.com/v1").rstrip("/")
-        self.model = model or os.getenv("DOC_AI_MODEL", "gpt-4o-mini")
+        self.model = model or os.getenv("TCDA_AI_MODEL", "gpt-4o-mini")
         self.timeout = timeout
         if not self.api_key:
             raise ProviderError(
-                "Falta DOC_AI_API_KEY en el entorno. Configure la clave o use "
+                "Falta TCDA_AI_API_KEY en el entorno. Configure la clave o use "
                 "el modo mock (predeterminado).")
         if not self.base_url.startswith(("http://", "https://")):
-            raise ProviderError("DOC_AI_BASE_URL debe ser http(s).")
+            raise ProviderError("TCDA_AI_BASE_URL debe ser http(s).")
 
     def synthesize(self, question: str, evidence: List[Dict[str, Any]],
                    instructions: str = OUTPUT_INSTRUCTIONS) -> str:
@@ -143,7 +143,7 @@ class APIProvider(Provider):
 
 def get_provider(mode: Optional[str] = None) -> Provider:
     """Fabrica el proveedor según configuración (por defecto: mock)."""
-    mode = (mode or os.getenv("DOC_AI_PROVIDER", "mock")).strip().lower()
+    mode = (mode or os.getenv("TCDA_AI_PROVIDER", "mock")).strip().lower()
     if mode == "mock":
         return MockProvider()
     if mode == "api":

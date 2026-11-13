@@ -686,7 +686,7 @@ def main():
     p8 = sub.add_parser("ask", help="Consulta con evidencia citable (mock por defecto)")
     p8.add_argument("question", nargs="+", help="Pregunta en español")
     p8.add_argument("--provider", choices=["mock", "api"], default=None,
-                    help="Proveedor de síntesis (por defecto: DOC_AI_PROVIDER o mock, sin red)")
+                    help="Proveedor de síntesis (por defecto: TCDA_AI_PROVIDER o mock, sin red)")
     p8.add_argument("--limit", type=int, default=8, help="Máximo de evidencias (por defecto: 8)")
     p8.add_argument("--evidence", type=int, default=12, help="Máximo de resultados FTS5 a considerar")
     p8.add_argument("--yes", action="store_true", help="Confirma el envío al proveedor externo (modo api)")

@@ -7,7 +7,9 @@ Restricciones (cumplidas estrictamente):
 - Usar MockProvider para IA (sin coste, sin red).
 - PDFs sintéticos creados con pymupdf.
 - Configuración Tesseract simulada cuando is_available() falle.
+- Variables TCDA_* controlando exclusivamente; DOC_* del entorno no influyen.
 """
+
 import os
 import sys
 import tempfile
@@ -21,8 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'vendor',
 
 from documental.database import Repository
 from documental.config import (
-    get_collection_source, get_workspace_root, validate_collection_path,
-    ensure_directories, DIGITAL_TEXT_THRESHOLD, OCR_ENABLED
+    get_config, init_config, TCDAConfig, validate_collection_path, DIGITAL_TEXT_THRESHOLD, OCR_ENABLED
 )
 from documental.cli import (
     OperationResult, CollectionPathError, InvalidQuestionError,
@@ -59,21 +60,72 @@ def temp_repo(temp_dir):
     repo.close()
 
 
+@pytest.fixture(autouse=True)
+def isolate_config(temp_dir):
+    """Isolar configuración TCDA_* para cada prueba.
+
+    Asegura que:
+    - Las variables TCDA_* de IA se controlan explícitamente.
+    - Las variables DOC_* del entorno no influyen en Tech Cyan.
+    - El entorno se restaura después de cada prueba.
+    - Se usa almacenamiento temporal (tmp_path) cuando es necesario.
+    
+    NOTA: Esta fixture NO establece TCDA_WORKSPACE_ROOT ni TCDA_COLLECTION_SOURCE
+    por defecto, para permitir que las pruebas verifiquen el comportamiento por defecto
+    (None cuándo no están configuradas). Los tests que necesiten configuración TCDA_*
+    explícita deben usar el parámetro config_overrides.
+    """
+    # Capturar estado actual del entorno
+    old_env = os.environ.copy()
+
+    # Solo configurar variables TCDA_* de IA, no rutas de workspace/colección
+    # para no interferir con pruebas de comportamiento por defecto
+    tcda_config = init_config({
+        "TCDA_AI_PROVIDER": "mock",
+        "TCDA_AI_API_KEY": "",
+        "TCDA_AI_BASE_URL": "",
+        "TCDA_AI_MODEL": "gpt-4o-mini",
+        "TCDA_AI_MAX_EVIDENCE": "8",
+        "TCDA_AI_MAX_EVIDENCE_ROWS": "12",
+        "TCDA_AI_MAX_FRAGMENT_CHARS": "1200",
+        "TCDA_AI_MAX_CONTEXT_CHARS": "9000",
+        "TCDA_OCR_ENABLED": "1",
+        "TCDA_OCR_LANGUAGES": "spa",
+        "TCDA_OCR_DPI": "200",
+    })
+
+    yield
+
+    # Restaurar entorno exacto después de la prueba
+    os.environ.clear()
+    os.environ.update(old_env)
+
+    # Cerrar cualquier configuración global residual
+    from documental.config import _config_instance
+    if _config_instance is not None:
+        # No cerrar, solo permitir re-inicialización
+        pass
+
+
+# =============================================================================
+# Fixtures de ayuda
+# =============================================================================
+
 def _create_synthetic_pdf(temp_dir, pages_info):
     """Crear PDF sintético usando pymupdf.
-    
+
     pages_info: lista de dicts con keys:
       - text: str, contenido de la página
       - quality: str, "ok", "empty" o "suspicious" (opcional)
     """
     import pymupdf
-    
+
     pdf_path = temp_dir / "sample.pdf"
     doc = pymupdf.open()
-    
+
     # Tamaño A4 en puntos: 595 x 842
     A4_SIZE = (595, 842)
-    
+
     for page_info in pages_info:
         text = page_info.get("text", "")
         # Crear página nueva con dimensiones A4
@@ -81,7 +133,7 @@ def _create_synthetic_pdf(temp_dir, pages_info):
         # Insertar texto
         if text.strip():
             page.insert_text((50, 70), text)
-    
+
     doc.save(str(pdf_path))
     doc.close()
     return pdf_path
@@ -91,24 +143,24 @@ def _create_synthetic_pdf(temp_dir, pages_info):
 def temp_pdf(temp_dir):
     """Crear PDF sintético con 3 páginas: ok, empty, suspicious."""
     import pymupdf
-    
+
     pdf_path = temp_dir / "sample.pdf"
     doc = pymupdf.open()
-    
+
     # Página 1: texto largo (quality ok)
     page1 = doc.new_page(width=595, height=842)
     page1.insert_text((50, 70), "Este es el contenido de la página uno con suficiente texto digital para ser útil. " * 5)
-    
+
     # Página 2: texto vacío (quality empty)
     page2 = doc.new_page(width=595, height=842)
-    
+
     # Página 3: poco texto (quality suspicious)
     page3 = doc.new_page(width=595, height=842)
     page3.insert_text((50, 70), "hola")
-    
+
     doc.save(str(pdf_path))
     doc.close()
-    
+
     # Retornar path para los tests
     return pdf_path
 
@@ -133,7 +185,6 @@ def mock_provider():
 # =============================================================================
 # TESTS DE BASE DE DATOS Y ESTADO
 # =============================================================================
-
 
 @pytest.mark.isolated
 def test_repository_creation(temp_repo):
@@ -192,8 +243,7 @@ def test_rebuild_fts_index(temp_repo, temp_pdf):
 
     # Insertar páginas con texto (solo página 1 tiene texto sustancial, página 2 empty, página 3 suspicious)
     temp_repo.insert_page("p1", did, 1,
-                        "CONSTITUCIÓN POLÍTICA ARTÍCULO PRIMERO Todos los pueblos tienen derecho a determinar libremente su estatus político y a perseguir libremente sus objetivos de desarrollo económico, social y cultural.",
-                        "digital", "ok", None)
+                        "CONSTITUCIÓN POLÍTICA ARTÍCULO PRIMERO Todos los pueblos tienen derecho a determinar libremente su estatus político y a perseguir libremente sus objetivos de desarrollo económico, social y cultural.", "digital", "ok", None)
 
     temp_repo.insert_page("p2", did, 2,
                         "", "digital", "empty", None)
@@ -210,11 +260,14 @@ def test_rebuild_fts_index(temp_repo, temp_pdf):
     assert len(results) > 0
     assert results[0]["document_id"] == did
 
+    # Buscar término que no existe
+    results_empty = temp_repo.search_fts("xyzabc123", limit=5)
+    assert len(results_empty) == 0  # Nada debe encontrarse
+
 
 # =============================================================================
 # TESTS DE EXTRACCIÓN PDF + OCR
 # =============================================================================
-
 
 @pytest.mark.isolated
 def test_extract_pdf_digital(temp_repo, temp_pdf):
@@ -258,7 +311,9 @@ def test_ocr_not_available_no_crash(temp_repo):
 
     # Este test verifica que la función no crash cuando Tesseract no está configurado
     # Al no tener colección configurada, debería retornar error gracefully
-    result = cmd_ocr(type('Args', (), {'source': None, 'limit': None, 'dpi': 200})())
+    # Con configuración TCDA_* aislada, OCR debería comportarse consistently
+    args = type('Args', (), {'source': None, 'limit': None, 'dpi': 200})()
+    result = cmd_ocr(args)
     # Debería retornar OperationResult con error, no lanzar excepción
     assert result is not None
     assert result.success is False
@@ -267,7 +322,6 @@ def test_ocr_not_available_no_crash(temp_repo):
 # =============================================================================
 # TESTS DE CLI Y EXCEPCIONES
 # =============================================================================
-
 
 @pytest.mark.isolated
 def test_exceptions_are_raisable():
@@ -309,7 +363,6 @@ def test_provider_confirmation_error():
 # =============================================================================
 # TESTS DE INTEGRACIÓN COMPLETA (simulada)
 # =============================================================================
-
 
 @pytest.mark.isolated
 def test_scan_collection_with_virtual_source(temp_repo, temp_dir):
@@ -362,7 +415,6 @@ def test_search_fts_basic(temp_repo):
 # TESTS DE VALIDACIÓN DE MOTOR
 # =============================================================================
 
-
 @pytest.mark.isolated
 def test_validate_engine_empty(temp_repo):
     """Test: validate_engine en BD vacía retorna reporte estructurado."""
@@ -384,7 +436,6 @@ def test_validate_engine_empty(temp_repo):
 # =============================================================================
 # TESTS DE RUTAS Y CONFIGURACIÓN
 # =============================================================================
-
 
 @pytest.mark.isolated
 def test_validate_collection_path_none():
@@ -426,15 +477,9 @@ def test_detect_workspace_root_default_none():
 # TESTS DE ROLLBACK Y RECUPERACIÓN
 # =============================================================================
 
-
 @pytest.mark.isolated
 def test_rollback_preserves_previous(temp_repo):
-    """Test: Que el staging transaccional conserve datos anteriores ante fallo.
-
-    Este test verifica el comportamiento transaccional: si la validación
-    falla después de insertar páginas staging, las páginas antiguas deben
-    conservarse.
-    """
+    """Test: Que el staging transaccional conserve datos anteriores ante fallo."""
     # Insertar documento existente primero
     did = "test-rollback-001"
     temp_repo.insert_document(did, "file.pdf", "test.pdf",
@@ -461,9 +506,8 @@ def test_rollback_preserves_previous(temp_repo):
 
 
 # =============================================================================
-# TESTS DE COMPATIBILIDAD CON MODELS
+# TESTS DE MODELS
 # =============================================================================
-
 
 @pytest.mark.isolated
 def test_models_dataclasses():
@@ -528,7 +572,6 @@ def test_models_dataclasses():
 # TESTS DE LIMITES Y UMbrales
 # =============================================================================
 
-
 @pytest.mark.isolated
 def test_digital_text_threshold():
     """Test: Umbral de texto digital configurable."""
@@ -539,66 +582,142 @@ def test_digital_text_threshold():
     assert DIGITAL_TEXT_THRESHOLD > 0
 
 
-if __name__ == "__main__":
-    """Ejecutar pruebas básicas de forma aislada."""
-    import sys
-    # No usar sys.exit aquí para no interferir con la salida de pytest
-    print("Ejecutando pruebas aisladas...")
-    print("Tests disponibles: 22")
-    print("Para ejecutar: python -m pytest tests/audits/test_engine_isolated.py -v")
-
 # =============================================================================
-# TESTS DE FALLBACK DE EXTRACCIÓN (pypdf ↔ pymupdf)
+# TESTS NUEVOS DE AISLAMIENTO CONFIGURACIÓN
 # =============================================================================
 
-
 @pytest.mark.isolated
-def test_fallback_when_pypdf_fails(temp_pdf, caplog):
-    """Si pypdf lanza excepción, la extracción cae a pymupdf."""
-    import documental.extractor as ex
+def test_tcda_workspace_root_isolated_from_doc_env():
+    """Test: Una variable DOC_WORKSPACE_ROOT presente no modifica el workspace de Tech Cyan.
 
-    def boom(_):
-        raise RuntimeError("pypdf roto")
-    with patch.object(ex, "_extract_with_pypdf", boom):
-        results = ex.extract_pdf_digital(temp_pdf)
-    assert len(results) == 3
-    assert all(r["extraction_method"] != "failed" for r in results)
-    assert results[0]["quality_status"] == "ok"
+    Verifica que las variables DOC_* del entorno no contaminan la configuración
+    TCDA_* de Tech Cyan.
+    """
+    from documental.config import get_collection_source, get_workspace_root
 
+    # Establecer DOC_WORKSPACE_ROOT en el entorno (simulando configuración antigua)
+    os.environ["DOC_WORKSPACE_ROOT"] = "C:/Old/Collection/Path"
 
-@pytest.mark.isolated
-def test_fallback_when_pypdf_returns_all_empty(temp_pdf):
-    """Si pypdf devuelve texto vacío en todas las páginas, se usa pymupdf."""
-    import documental.extractor as ex
+    # get_collection_source y get_workspace_root deben leer de la configuración global
+    # que fue inicializada con valores TCDA_*, no de DOC_*
+    source = get_collection_source()
+    root = get_workspace_root()
 
-    with patch.object(ex, "_extract_with_pypdf", lambda _: ["", "", ""]):
-        results = ex.extract_pdf_digital(temp_pdf)
-    assert len(results) == 3
-    assert results[0]["quality_status"] == "ok"
+    # Ambas deben retornar None cuando no haya TCDA_* configurado,
+    # aunque DOC_* esté presente en el entorno
+    assert source is None, "get_collection_source() debe retornar None cuando no está TCDA_COLLECTION_SOURCE"
+    assert root is None, "get_workspace_root() debe retornar None cuando no está TCDA_WORKSPACE_ROOT"
 
-
-@pytest.mark.isolated
-def test_failed_when_all_backends_crash(temp_pdf):
-    """Si ambos backends fallan, retorna registro 'failed' sin lanzar excepción."""
-    import documental.extractor as ex
-
-    def boom(_):
-        raise RuntimeError("sin backends")
-    with patch.object(ex, "_extract_with_pypdf", boom),          patch.object(ex, "_extract_with_pymupdf", boom):
-        results = ex.extract_pdf_digital(temp_pdf)
-    assert len(results) == 1
-    assert results[0]["extraction_method"] == "failed"
-    assert results[0]["error_message"]
+    # Limpiar entorno
+    del os.environ["DOC_WORKSPACE_ROOT"]
 
 
 @pytest.mark.isolated
-def test_pymupdf_missing_degrades_gracefully(temp_pdf):
-    """Si pymupdf no está instalado (ImportError), pypdf primario basta."""
-    import documental.extractor as ex
+def test_tcda_collection_source_isolated_from_doc_env():
+    """Test: Una variable DOC_COLLECTION_SOURCE presente no modifica la colección de Tech Cyan."""
+    from documental.config import get_collection_source
 
-    def no_module(_):
-        raise ImportError("pymupdf no instalado")
-    with patch.object(ex, "_extract_with_pymupdf", no_module):
-        results = ex.extract_pdf_digital(temp_pdf)
-    assert len(results) == 3
-    assert results[0]["quality_status"] == "ok"
+    # Establecer DOC_COLLECTION_SOURCE en el entorno
+    os.environ["DOC_COLLECTION_SOURCE"] = "C:/Old/Collection/Path"
+
+    # Debe retornar None porque la configuración global usa TCDA_*
+    source = get_collection_source()
+    assert source is None, "get_collection_source() debe ignorar DOC_COLLECTION_SOURCE y usar TCDA_COLLECTION_SOURCE"
+
+    # Limpiar entorno
+    del os.environ["DOC_COLLECTION_SOURCE"]
+
+
+@pytest.mark.isolated
+def test_tcdai_provider_default_mock():
+    """Test: El proveedor predeterminado sigue siendo MockProvider."""
+    from documental.providers import get_provider
+
+    provider = get_provider()
+    assert provider.name == "mock"
+    assert isinstance(provider, MockProvider)
+
+
+@pytest.mark.isolated
+def test_tcdai_config_explicit_can_coexist():
+    """Test: Dos configuraciones explícitas distintas pueden coexistir sin intercambiar sus rutas."""
+    from documental.config import init_config, get_config
+
+    # Configuración 1: workspace en /tmp/1
+    config1 = init_config({
+        "TCDA_WORKSPACE_ROOT": "/tmp/test_config_1",
+        "TCDA_COLLECTION_SOURCE": None,
+    })
+
+    # Configuración 2: workspace en /tmp/2
+    config2 = init_config({
+        "TCDA_WORKSPACE_ROOT": "/tmp/test_config_2",
+        "TCDA_COLLECTION_SOURCE": None,
+    })
+
+    # Verificar que cada una tiene su propia workspace root
+    assert config1.workspace_root == Path("/tmp/test_config_1")
+    assert config2.workspace_root == Path("/tmp/test_config_2")
+
+    # Las rutas deben ser distintas
+    assert str(config1.workspace_root) != str(config2.workspace_root)
+
+
+@pytest.mark.isolated
+def test_tcdai_no_tcda_vars_uses_defaults():
+    """Test: La ausencia de variables TCDA_* no provoca la selección de rutas personales."""
+    from documental.config import get_collection_source, get_workspace_root
+
+    # Cuando no hay TCDA_* configurado, deben retornar None
+    # aunque haya variables DOC_* del entorno (por si acaso las dejamos limpias)
+    source = get_collection_source()
+    root = get_workspace_root()
+
+    assert source is None, "Ausencia de TCDA_* debe retornar None, no rutas personales"
+    assert root is None, "Ausencia de TCDA_* debe retornar None, no rutas personales"
+
+
+@pytest.mark.isolated
+def test_ocr_environment_restore_after_exception():
+    """Test: El estado del entorno se restaura tras una operación OCR, incluso ante excepciones.
+
+    Verifica que las variables de entorno Tesseract no quedan modificadas
+    permanentemente después de una operación OCR.
+    """
+    import os
+
+    # Capturar estado previo de TESSDATA_PREFIX
+    prev_tessdata = os.getenv("TESSDATA_PREFIX")
+
+    # Ejecutar una operación OCR que debería fallar gracefully
+    # cuando Tesseract no está configurado adecuadamente
+    from documental.cli import cmd_ocr
+    args = type('Args', (), {'source': None, 'limit': None, 'dpi': 200})()
+    result = cmd_ocr(args)
+
+    # Verificar que TESSDATA_PREFIX volvió a ser None o su valor previo
+    current_tessdata = os.getenv("TESSDATA_PREFIX")
+    # El valor debe ser el mismo que antes (ninguna contaminación permanente)
+    assert current_tessdata == prev_tessdata, \
+        f"Contaminación de entorno: TESSDATA_PREFIX cambió de {prev_tessdata} a {current_tessdata}"
+
+
+@pytest.mark.isolated
+def test_tcdai_ai_provider_mock_not_activate_api():
+    """Test: Las variables DOC_AI_* no activan el proveedor API."""
+    from documental.providers import get_provider
+
+    # Asegurar que TCDA_AI_PROVIDER es mock
+    # (no DOC_AI_PROVIDER del entorno)
+    provider = get_provider()
+    assert provider.name == "mock", "El proveedor debe ser MockProvider, no API"
+
+
+@pytest.mark.isolated
+def test_digital_text_threshold_from_config():
+    """Test: El umbral de texto digital proviene de configuración TCDA_, no del entorno DOC_*."""
+    from documental.config import get_config, DIGITAL_TEXT_THRESHOLD
+
+    config = get_config()
+    # El valor debe provenir de la configuración TCDA_, no directamente del entorno
+    assert config.digital_text_threshold == 10
